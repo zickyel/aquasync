@@ -22,11 +22,11 @@ $default_settings = [
 
 $default_user = [
     'user_id' => 1,
+    'role' => 'master',
     'first_name' => 'Ezekiel',
     'last_name' => 'Reyes',
     'email' => 'ezekielreyes@gmail.com',
-    'username' => 'admin',
-    'role' => 'Master Station Admin'
+    'username' => 'admin'
 ];
 
 if (!$db_connected || !$conn) {
@@ -231,9 +231,10 @@ if ($type === 'live_snapshot') {
     }
 } elseif ($type === 'users') {
     $users = [];
-    $res = $conn->query("SELECT user_id, first_name, last_name, email, username, created_at FROM users ORDER BY user_id ASC");
+    $res = $conn->query("SELECT user_id, role, first_name, last_name, email, username, created_at FROM users ORDER BY user_id ASC");
     if ($res && $res->num_rows > 0) {
         while ($u = $res->fetch_assoc()) {
+            $u['role'] = strtolower(trim($u['role'] ?? 'admin'));
             $users[] = $u;
         }
     } else {

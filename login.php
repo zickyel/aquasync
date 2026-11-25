@@ -26,7 +26,7 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST') 
         $user_data = null;
 
         if ($db_connected && $conn) {
-            $stmt = $conn->prepare("SELECT user_id, first_name, last_name, email, username, password FROM users WHERE username = ? OR email = ? LIMIT 1");
+            $stmt = $conn->prepare("SELECT user_id, role, first_name, last_name, email, username, password FROM users WHERE username = ? OR email = ? LIMIT 1");
             if ($stmt) {
                 $stmt->bind_param("ss", $user_input, $user_input);
                 $stmt->execute();
@@ -58,6 +58,7 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST') 
         if ($authenticated && $user_data) {
             session_regenerate_id(true);
             $_SESSION['user_id'] = $user_data['user_id'];
+            $_SESSION['role'] = strtolower(trim($user_data['role'] ?? 'admin'));
             $_SESSION['username'] = $user_data['username'];
             $_SESSION['name'] = $user_data['first_name'] . ' ' . $user_data['last_name'];
             $_SESSION['email'] = $user_data['email'];
@@ -101,9 +102,9 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST') 
             <div class="login-brand-topline">
                 <span class="login-brand-tag">
                     <span class="login-brand-dot"></span>
-                    MUNICIPAL WATER REFILL SYSTEM
+                    AUTOMATED REFILL CONTROLLER
                 </span>
-                <span class="login-brand-loc">AquaSync Station</span>
+                <span class="login-brand-loc">AQUASYNC LOGIN PANEL</span>
             </div>
 
             <div class="login-brand-center">

@@ -1644,3 +1644,93 @@ body {
         display: none;
     }
 }
+
+/* ========================================== */
+/* PRINT STYLES (SUMMARY REPORT)              */
+/* ========================================== */
+@media print {
+    @page {
+        size: auto;
+        margin: 12mm;
+    }
+
+    body {
+        background: #ffffff !important;
+        color: #0f172a !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .sidebar,
+    .sidebar-backdrop,
+    .topbar-header,
+    #tab-reports .section-header-row .d-flex {
+        display: none !important;
+    }
+
+    .main-wrapper {
+        margin-left: 0 !important;
+        width: 100% !important;
+        min-height: auto !important;
+    }
+
+    .content-area {
+        padding: 0 !important;
+        margin: 0 !important;
+        max-width: 100% !important;
+    }
+
+    .section-header-row {
+        margin-bottom: 14px !important;
+    }
+
+    .section-main-heading {
+        font-size: 1.35rem !important;
+    }
+
+    .white-panel {
+        box-shadow: none !important;
+        border: 1px solid #cbd5e1 !important;
+        padding: 16px !important;
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    .reports-charts-row {
+        display: block !important;
+        margin-bottom: 16px !important;
+    }
+
+    .reports-charts-row > [class*="col-"] {
+        width: 100% !important;
+        max-width: 100% !important;
+        flex: none !important;
+        margin-bottom: 14px !important;
+    }
+
+    .reports-chart-container {
+        height: 240px !important;
+        width: 100% !important;
+    }
+
+    .reports-doughnut-container {
+        max-width: 460px !important;
+        height: 250px !important;
+        margin: 0 auto !important;
+    }
+
+    .reports-chart-container canvas {
+        max-width: 100% !important;
+        max-height: 100% !important;
+    }
+
+    .table-responsive {
+        overflow: visible !important;
+    }
+
+    .modern-table th,
+    .modern-table td {
+        padding: 8px 10px !important;
+        font-size: 0.82rem !important;
+    }
+}

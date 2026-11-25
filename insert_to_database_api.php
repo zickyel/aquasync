@@ -1,4 +1,7 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 header('Content-Type: application/json; charset=UTF-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
@@ -270,6 +273,25 @@ switch ($action) {
         break;
 
     case 'add_user':
+        $actor_id = (int)($_SESSION['user_id'] ?? 0);
+        $actor_role = strtolower(trim($_SESSION['role'] ?? ''));
+        if ($actor_id > 0) {
+            $role_stmt = $conn->prepare("SELECT role FROM users WHERE user_id = ? LIMIT 1");
+            if ($role_stmt) {
+                $role_stmt->bind_param("i", $actor_id);
+                $role_stmt->execute();
+                $role_res = $role_stmt->get_result();
+                if ($role_res && $role_row = $role_res->fetch_assoc()) {
+                    $actor_role = strtolower(trim($role_row['role']));
+                }
+                $role_stmt->close();
+            }
+        }
+        if ($actor_role !== 'master') {
+            $response['message'] = 'Only Master Administrators can add new administrator accounts.';
+            break;
+        }
+
         $first_name = trim($input['first_name'] ?? '');
         $last_name  = trim($input['last_name'] ?? '');
         $email      = trim($input['email'] ?? '');
@@ -281,7 +303,7 @@ switch ($action) {
             break;
         }
 
-        $stmt = $conn->prepare("INSERT INTO users (first_name, last_name, email, username, password, created_at) VALUES (?, ?, ?, ?, ?, NOW())");
+        $stmt = $conn->prepare("INSERT INTO users (role, first_name, last_name, email, username, password, created_at) VALUES ('admin', ?, ?, ?, ?, ?, NOW())");
         $stmt->bind_param("sssss", $first_name, $last_name, $email, $username, $password);
         if ($stmt->execute()) {
             $response['success'] = true;
@@ -316,17 +338,70 @@ switch ($action) {
         break;
 
     case 'delete_user':
-        $user_id = (int)($input['user_id'] ?? 0);
-        if ($user_id <= 1) {
+        $target_id = (int)($input['user_id'] ?? 0);
+        $actor_id = (int)($_SESSION['user_id'] ?? 0);
+        $actor_role = strtolower(trim($_SESSION['role'] ?? ''));
+
+        if ($actor_id <= 0 || $target_id <= 0) {
+            $response['message'] = 'Invalid user request.';
+            break;
+        }
+
+        // Verify actor role from database
+        $actor_stmt = $conn->prepare("SELECT role FROM users WHERE user_id = ? LIMIT 1");
+        if ($actor_stmt) {
+            $actor_stmt->bind_param("i", $actor_id);
+            $actor_stmt->execute();
+            $actor_res = $actor_stmt->get_result();
+            if ($actor_res && $actor_row = $actor_res->fetch_assoc()) {
+                $actor_role = strtolower(trim($actor_row['role']));
+            }
+            $actor_stmt->close();
+        }
+
+        // Verify target user exists and get target role
+        $target_role = '';
+        $target_stmt = $conn->prepare("SELECT role FROM users WHERE user_id = ? LIMIT 1");
+        if ($target_stmt) {
+            $target_stmt->bind_param("i", $target_id);
+            $target_stmt->execute();
+            $target_res = $target_stmt->get_result();
+            if ($target_res && $target_row = $target_res->fetch_assoc()) {
+                $target_role = strtolower(trim($target_row['role']));
+            }
+            $target_stmt->close();
+        }
+
+        if ($target_role === '') {
+            $response['message'] = 'User account not found.';
+            break;
+        }
+
+        if ($target_role === 'master') {
             $response['message'] = 'Master Administrator account cannot be deleted.';
             break;
         }
 
+        $is_self = ($target_id === $actor_id);
+        $can_delete = ($actor_role === 'master') || ($actor_role === 'admin' && $is_self);
+
+        if (!$can_delete) {
+            $response['message'] = 'You do not have permission to delete this account.';
+            break;
+        }
+
         $stmt = $conn->prepare("DELETE FROM users WHERE user_id = ?");
-        $stmt->bind_param("i", $user_id);
+        $stmt->bind_param("i", $target_id);
         if ($stmt->execute()) {
             $response['success'] = true;
-            $response['message'] = "User account removed.";
+            $response['self_deleted'] = $is_self;
+            $response['message'] = $is_self
+                ? 'Your account has been deleted. Logging out...'
+                : 'Administrator account removed.';
+            if ($is_self) {
+                $_SESSION = [];
+                session_destroy();
+            }
         } else {
             $response['message'] = "Error removing user.";
         }

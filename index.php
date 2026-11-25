@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 require_once __DIR__ . '/dbcon.php';
 
@@ -15,6 +15,8 @@ if (!in_array($page, ['dashboard', 'pumplogs', 'reports', 'settings', 'account']
 }
 
 // User credentials from session
+$current_user_id = (int)($_SESSION['user_id'] ?? 1);
+$current_user_role = strtolower(trim($_SESSION['role'] ?? 'admin'));
 $admin_name = $_SESSION['name'] ?? 'Ezekiel Reyes';
 $admin_email = $_SESSION['email'] ?? 'ezekielreyes@gmail.com';
 $admin_username = $_SESSION['username'] ?? 'admin';
@@ -26,6 +28,22 @@ $max_threshold = 90;
 $pump_status = 'OFF';
 
 if ($db_connected && $conn) {
+    // 0. Sync current logged-in user's role from database
+    $user_role_stmt = $conn->prepare("SELECT role, first_name, last_name, email, username FROM users WHERE user_id = ? LIMIT 1");
+    if ($user_role_stmt) {
+        $user_role_stmt->bind_param("i", $current_user_id);
+        $user_role_stmt->execute();
+        $ur_res = $user_role_stmt->get_result();
+        if ($ur_res && $ur_row = $ur_res->fetch_assoc()) {
+            $current_user_role = strtolower(trim($ur_row['role'] ?? 'admin'));
+            $_SESSION['role'] = $current_user_role;
+            $admin_name = trim(($ur_row['first_name'] ?? '') . ' ' . ($ur_row['last_name'] ?? ''));
+            $admin_email = $ur_row['email'] ?? $admin_email;
+            $admin_username = $ur_row['username'] ?? $admin_username;
+        }
+        $user_role_stmt->close();
+    }
+
     // 1. Settings
     $set_q = $conn->query("SELECT min_threshold, max_threshold FROM settings ORDER BY setting_id DESC LIMIT 1");
     if ($set_q && $s_r = $set_q->fetch_assoc()) {
@@ -200,17 +218,6 @@ if ($db_connected && $conn) {
             </ul>
         </div>
 
-        <!-- SIDEBAR BOTTOM: ESP32 HARDWARE CARD & ADMIN PROFILE -->
-        <div class="sidebar-bottom">
-            <div class="device-network-card">
-                <div class="d-network-top">
-                    <span class="d-network-label">ESP32 Hardware Node</span>
-                    <span class="status-dot-green" title="ESP32 Online & Polling"></span>
-                </div>
-                <div class="d-network-title">ESP32 Controller</div>
-                <div class="d-network-sub">Water Sensor + Pump Relay Active</div>
-            </div>
-
             <!-- Admin Profile Strip -->
             <div class="user-profile-strip">
                 <div class="user-info-left">
@@ -288,534 +295,14 @@ if ($db_connected && $conn) {
         <!-- CONTENT TABS -->
         <div class="content-area">
 
-            <!-- ========================================== -->
-            <!-- 1. DASHBOARD TAB (REAL-TIME MONITORING)    -->
-            <!-- ========================================== -->
-            <section id="tab-dashboard" class="tab-section <?= ($page === 'dashboard') ? 'active' : '' ?>">
-                <!-- Title Header Row -->
-                <div class="section-header-row">
-                    <div>
-                        <h1 class="section-main-heading">Water Station System Status</h1>
-                        
-                    </div>
-                    <div class="d-flex gap-2 flex-wrap">
-                        <button class="btn-modern-primary" onclick="switchTab('settings')">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="4" y1="21" x2="4" y2="14"></line>
-                                <line x1="4" y1="10" x2="4" y2="3"></line>
-                                <line x1="12" y1="21" x2="12" y2="12"></line>
-                                <line x1="12" y1="8" x2="12" y2="3"></line>
-                            </svg>
-                            Threshold Configurations
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Hero Banner Card -->
-                <div class="hero-banner-card">
-                    <div class="hero-content-col">
-                        <h2 class="hero-title mb-0">Welcome back,<br> <span id="heroUserName">- <?= htmlspecialchars(explode(' ', $admin_name)[0]) ?></span></h2>
-                    </div>
-                    <div class="hero-badge-col position-relative" style="z-index: 2;">
-                        <div class="hero-mini-tag mb-0">
-                            <svg width="14" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-                            </svg>
-                            AUTOMATED REFILL CONTROLLER
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 4 Key Metric Cards (Bootstrap Grid Responsive) -->
-                <div class="snapshot-title-row">
-                    <div>
-                        <h3 class="snapshot-heading">Operational Metrics Snapshot</h3>
-                        
-                    </div>
-                </div>
-
-                <div class="row g-3 g-xl-4 mb-4">
-                    <!-- Metric 1: Water Level -->
-                    <div class="col-12 col-sm-6 col-xl-3">
-                        <div class="stat-card">
-                            <div class="stat-card-top">
-                                <span class="stat-category-tag">Water Level</span>
-                            </div>
-                            <div class="stat-number-row mb-1">
-                                <span class="stat-main-number" id="cardWaterLevelVal"><?= $current_water_level ?></span>
-                                <span class="stat-unit">%</span>
-                            </div>
-                            <div class="progress my-2" style="height: 6px; border-radius: 4px; background: #e2e8f0;">
-                                <div class="progress-bar bg-primary" id="cardWaterLevelBar" style="width: <?= $current_water_level ?>%; border-radius: 4px;"></div>
-                            </div>
-                            <div class="stat-card-footer">
-                                <span class="stat-footer-text">Reservoir Status</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Metric 2: Pump Status -->
-                    <div class="col-12 col-sm-6 col-xl-3">
-                        <div class="stat-card">
-                            <div class="stat-card-top">
-                                <span class="stat-category-tag">Water Pump</span>
-                            </div>
-                            <div class="stat-number-row mb-1">
-                                <span class="stat-main-number" id="cardPumpStatusText"><?= $pump_status ?></span>
-                            </div>
-                            <div class="stat-card-footer">
-                                <span class="stat-footer-text">Relay State</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Metric 3: Refill Cycles Today -->
-                    <div class="col-12 col-sm-6 col-xl-3">
-                        <div class="stat-card">
-                            <div class="stat-card-top">
-                                <span class="stat-category-tag">Refill Cycles</span>
-                            </div>
-                            <div class="stat-number-row mb-1">
-                                <span class="stat-main-number" id="cardCyclesCount"><?= $cycles_today ?></span>
-                                <span class="stat-unit">today</span>
-                            </div>
-                            <div class="stat-card-footer">
-                                <span class="stat-footer-text">Total Operations</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Metric 4: Threshold Config Window -->
-                    <div class="col-12 col-sm-6 col-xl-3">
-                        <div class="stat-card">
-                            <div class="stat-card-top">
-                                <span class="stat-category-tag">Safety Window</span>
-                            </div>
-                            <div class="stat-number-row mb-1">
-                                <span class="stat-main-number"><span id="cardMinThresh"><?= $min_threshold ?></span> - <span id="cardMaxThresh"><?= $max_threshold ?></span></span>
-                                <span class="stat-unit">%</span>
-                            </div>
-                            <div class="stat-card-footer">
-                                <span class="stat-footer-text">Threshold Limits</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Recent Activity Feed Table (Powered by pump_logs VIEW, Limit 10) -->
-                <div class="white-panel">
-                    <div class="panel-header-row">
-                        <div>
-                            <h4 class="panel-title">Recent Refill Operations</h4>
-                            <p class="panel-subtitle">Latest activity pump logs (Powered by Esp32)</p>
-                        </div>
-                        <a href="?page=pumplogs" class="btn-modern-outline" onclick="switchTab('pumplogs', event)">
-                            View All Pump Logs
-                        </a>
-                    </div>
-
-                    <div class="table-responsive">
-                        <table class="modern-table">
-                            <thead>
-                                <tr>
-                                    <th>Log ID</th>
-                                    <th>Pump Action</th>
-                                    <th>Water Level</th>
-                                    <th>Event Description</th>
-                                    <th>Recorded Time</th>
-                                </tr>
-                            </thead>
-                            <tbody id="dashboardRecentLogsBody">
-                                <?php if (empty($dashboard_logs)): ?>
-                                <tr>
-                                    <td colspan="5" class="text-center py-4 text-muted">No pump operations recorded yet.</td>
-                                </tr>
-                                <?php else: ?>
-                                <?php foreach ($dashboard_logs as $log): ?>
-                                <tr class="log-row">
-                                    <td><strong>#<?= htmlspecialchars($log['log_id']) ?></strong></td>
-                                    <td>
-                                        <?php if ($log['action'] === 'ON'): ?>
-                                            <span class="badge-pump-on">ON</span>
-                                        <?php else: ?>
-                                            <span class="badge-pump-off">OFF</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td class="fw-bold"><?= htmlspecialchars($log['water_level']) ?>%</td>
-                                    <td><?= htmlspecialchars($log['description']) ?></td>
-                                    <td class="text-muted small"><?= htmlspecialchars($log['created_at']) ?></td>
-                                </tr>
-                                <?php endforeach; ?>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-            </section>
-
-            <!-- ========================================== -->
-            <!-- 2. PUMP LOGS TAB (REFILL HISTORY)          -->
-            <!-- ========================================== -->
-            <section id="tab-pumplogs" class="tab-section <?= ($page === 'pumplogs') ? 'active' : '' ?>">
-                <div class="section-header-row">
-                    <div>
-                        <h1 class="section-main-heading">Pump Logs & Refill History</h1>
-                    </div>
-                    <div class="d-flex gap-2 flex-wrap">
-                        <button class="btn-modern-primary" onclick="exportLogsToCSV()">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                <polyline points="7 10 12 15 17 10"></polyline>
-                                <line x1="12" y1="15" x2="12" y2="3"></line>
-                            </svg>
-                            Export to CSV
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Filter Controls -->
-                <div class="white-panel mb-4">
-                    <div class="row g-3 align-items-center">
-                        <div class="col-12 col-md-4">
-                            <label class="form-label small fw-bold text-muted">Filter by Action</label>
-                            <select class="form-select" id="logFilterAction" onchange="loadPumpLogsTable()">
-                                <option value="">All Actions (ON & OFF)</option>
-                                <option value="ON">Pump Started (ON)</option>
-                                <option value="OFF">Pump Stopped (OFF)</option>
-                            </select>
-                        </div>
-                        <div class="col-12 col-md-5">
-                            <label class="form-label small fw-bold text-muted">Search in Logs</label>
-                            <input type="text" class="form-control" id="logSearchQuery" placeholder="Search by date, level, or ID..." onkeyup="filterLogRows()">
-                        </div>
-                        <div class="col-12 col-md-3 text-end d-flex align-items-end h-100">
-                            <span class="badge bg-light text-primary border p-2 w-100 mt-md-4 text-center" id="logsCountBadge">
-                                Showing latest records
-                            </span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Logs Table Panel -->
-                <div class="white-panel">
-                    <div class="table-responsive">
-                        <table class="modern-table" id="fullPumpLogsTable">
-                            <thead>
-                                <tr>
-                                    <th>Log ID</th>
-                                    <th>Pump Action</th>
-                                    <th>Water Level</th>
-                                    <th>Event Description</th>
-                                    <th>Timestamp</th>
-                                </tr>
-                            </thead>
-                            <tbody id="pumpLogsTableBody">
-                                <tr>
-                                    <td colspan="5" class="text-center py-4 text-muted">Fetching pump logs...</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
-
-            <!-- ========================================== -->
-            <!-- 3. REPORTS TAB (ANALYTICS)                 -->
-            <!-- ========================================== -->
-            <section id="tab-reports" class="tab-section <?= ($page === 'reports') ? 'active' : '' ?>">
-                <div class="section-header-row">
-                    <div>
-                        <h1 class="section-main-heading">Water Station Analytics & Reports</h1>
-                    </div>
-                    <div class="d-flex gap-2 flex-wrap">
-                        <button class="btn-modern-primary" onclick="exportWaterLevelsToCSV()">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                <polyline points="7 10 12 15 17 10"></polyline>
-                                <line x1="12" y1="15" x2="12" y2="3"></line>
-                            </svg>
-                            Export to CSV
-                        </button>
-                        <button class="btn-modern-outline" onclick="window.print()">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="6 9 6 2 18 2 18 9"></polyline>
-                                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
-                                <rect x="6" y="14" width="12" height="8"></rect>
-                            </svg>
-                            Print Summary Report
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Charts Section -->
-                <div class="row g-4 mb-4">
-                    <!-- Left Chart: Water Level Trend Over Time -->
-                    <div class="col-12 col-lg-8">
-                        <div class="white-panel h-100">
-                            <div class="panel-header-row">
-                                <div>
-                                    <h4 class="panel-title">Water Level Sensor History & Refill Curve</h4>
-                                    <p class="panel-subtitle">Sensor readings recorded across refill cycles</p>
-                                </div>
-                            </div>
-                            <div style="height: 320px; position: relative;">
-                                <canvas id="waterTrendChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Right Chart: Refill Distribution -->
-                    <div class="col-12 col-lg-4">
-                        <div class="white-panel h-100">
-                            <div class="panel-header-row">
-                                <div>
-                                    <h4 class="panel-title">Refills by Time of Day</h4>
-                                    <p class="panel-subtitle">Hourly distribution of pump activations</p>
-                                </div>
-                            </div>
-                            <div style="height: 320px; position: relative;">
-                                <canvas id="refillDistributionChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Reports Table: Water Level Sensor History (Latest to Oldest) -->
-                <div class="white-panel">
-                    <div class="panel-header-row">
-                        <div>
-                            <h4 class="panel-title">Water Level Sensor Readings Archive</h4>
-                            <p class="panel-subtitle">Historical records from sensor to database (Ordered: Latest to Oldest)</p>
-                        </div>
-                        <div>
-                            <span class="badge bg-light text-primary border p-2" id="waterLevelsCountBadge">
-                                Showing latest records
-                            </span>
-                        </div>
-                    </div>
-
-                    <div class="table-responsive">
-                        <table class="modern-table" id="reportsWaterLevelsTable">
-                            <thead>
-                                <tr>
-                                    <th>Level ID</th>
-                                    <th>Water Level (%)</th>
-                                    <th>Pump Action</th>
-                                    <th>Threshold Limits</th>
-                                    <th>Event Description</th>
-                                    <th>Recorded Timestamp</th>
-                                </tr>
-                            </thead>
-                            <tbody id="reportsWaterLevelsBody">
-                                <tr>
-                                    <td colspan="6" class="text-center py-4 text-muted">Loading water level records...</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
-
-            <!-- ========================================== -->
-            <!-- 4. SETTINGS TAB (THRESHOLD CONFIGURATION) -->
-            <!-- ========================================== -->
-            <section id="tab-settings" class="tab-section <?= ($page === 'settings') ? 'active' : '' ?>">
-                <div class="section-header-row mb-4">
-                    <div>
-                        <h1 class="section-main-heading">Settings &amp; Threshold Configuration</h1>
-                    </div>
-                    <div class="d-flex gap-2 flex-wrap">
-                        <button type="button" class="btn-modern-primary" onclick="saveThresholdSettings()">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
-                                <polyline points="17 21 17 13 7 13 7 21"></polyline>
-                                <polyline points="7 3 7 8 15 8"></polyline>
-                            </svg>
-                            Save Configuration
-                        </button>
-                    </div>
-                </div>
-
-                <div class="row g-4">
-                    <!-- Sliders Form (Original Style - Full Width) -->
-                    <div class="col-12">
-                        <div class="white-panel">
-                            <h4 class="panel-title mb-4">Auto Refill Thresholds</h4>
-
-                            <!-- Minimum Threshold Slider -->
-                            <div class="threshold-slider-group mb-4">
-                                <div class="d-flex align-items-center justify-content-between mb-2">
-                                    <span class="fw-bold text-heading">Minimum Threshold (Pump ON)</span>
-                                    <span class="badge bg-primary-subtle text-primary fw-bold px-3 py-1 fs-6"><span id="minThreshDisplay"><?= $min_threshold ?></span>%</span>
-                                </div>
-                                <input type="range" class="range-slider-modern w-100" id="inputMinThreshold" min="10" max="60" step="1" value="<?= $min_threshold ?>" oninput="updateThresholdSliders(this.value, null)">
-                                <!-- Tick marks: major every 10%, minor every 5% | Range: 10–60 = 50 units -->
-                                <div class="slider-ticks" style="position:relative;width:100%;height:18px;margin-top:2px;">
-                                    <?php
-                                    // Min slider: 10 to 60, step 5
-                                    $minS = 10; $maxS = 60; $range = $maxS - $minS;
-                                    for ($v = $minS; $v <= $maxS; $v += 5):
-                                        $pct = ($v - $minS) / $range * 100;
-                                        $isMajor = ($v % 10 === 0);
-                                        $h = $isMajor ? '10px' : '6px';
-                                        $color = $isMajor ? '#94a3b8' : '#cbd5e1';
-                                        $label = $isMajor ? "<span style='position:absolute;top:12px;left:50%;transform:translateX(-50%);font-size:0.7rem;color:#94a3b8;white-space:nowrap;'>{$v}%</span>" : '';
-                                    ?>
-                                    <span style="position:absolute;left:<?= $pct ?>%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;">
-                                        <span style="display:block;width:1.5px;height:<?= $h ?>;background:<?= $color ?>;"></span>
-                                        <?= $label ?>
-                                    </span>
-                                    <?php endfor; ?>
-                                </div>
-                            </div>
-
-                            <!-- Maximum Threshold Slider -->
-                            <div class="threshold-slider-group">
-                                <div class="d-flex align-items-center justify-content-between mb-2">
-                                    <span class="fw-bold text-heading">Maximum Threshold (Pump OFF)</span>
-                                    <span class="badge bg-success-subtle text-success fw-bold px-3 py-1 fs-6"><span id="maxThreshDisplay"><?= $max_threshold ?></span>%</span>
-                                </div>
-                                <input type="range" class="range-slider-modern w-100" id="inputMaxThreshold" min="80" max="90" step="1" value="<?= $max_threshold ?>" oninput="updateThresholdSliders(null, this.value)">
-                                <!-- Tick marks: major every 10%, minor every 5% | Range: 80–90 = 10 units -->
-                                <div class="slider-ticks" style="position:relative;width:100%;height:18px;margin-top:2px;">
-                                    <?php
-                                    // Max slider: 80 to 90, step 5
-                                    $minS2 = 80; $maxS2 = 90; $range2 = $maxS2 - $minS2;
-                                    for ($v2 = $minS2; $v2 <= $maxS2; $v2 += 5):
-                                        $pct2 = ($v2 - $minS2) / $range2 * 100;
-                                        $isMajor2 = ($v2 % 10 === 0);
-                                        $h2 = $isMajor2 ? '10px' : '6px';
-                                        $color2 = $isMajor2 ? '#94a3b8' : '#cbd5e1';
-                                        $label2 = $isMajor2 ? "<span style='position:absolute;top:12px;left:50%;transform:translateX(-50%);font-size:0.7rem;color:#94a3b8;white-space:nowrap;'>{$v2}%</span>" : '';
-                                    ?>
-                                    <span style="position:absolute;left:<?= $pct2 ?>%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;">
-                                        <span style="display:block;width:1.5px;height:<?= $h2 ?>;background:<?= $color2 ?>;"></span>
-                                        <?= $label2 ?>
-                                    </span>
-                                    <?php endfor; ?>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- ========================================== -->
-            <!-- 5. ACCOUNT TAB (ADMIN MANAGEMENT)          -->
-            <!-- ========================================== -->
-            <section id="tab-account" class="tab-section <?= ($page === 'account') ? 'active' : '' ?>">
-                <div class="section-header-row">
-                    <div>
-                        <h1 class="section-main-heading">Admin Account Management</h1>
-                    
-                    </div>
-                    <div class="d-flex gap-2 flex-wrap">
-                        <button class="btn-modern-outline" onclick="handleLogout()">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                                <polyline points="16 17 21 12 16 7"></polyline>
-                                <line x1="21" y1="12" x2="9" y2="12"></line>
-                            </svg>
-                            Logout
-                        </button>
-                        <button class="btn-modern-primary" data-bs-toggle="modal" data-bs-target="#addAdminModal">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="12" y1="5" x2="12" y2="19"></line>
-                                <line x1="5" y1="12" x2="19" y2="12"></line>
-                            </svg>
-                            Add New Administrator
-                        </button>
-                    </div>
-                </div>
-
-                <div class="row g-4">
-                    <!-- Current Admin Profile Card -->
-                    <div class="col-12 col-lg-5">
-                        <div class="white-panel">
-                            <div class="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom">
-                                <div class="user-avatar-circle" style="width: 60px; height: 60px; font-size: 1.5rem;" id="accountAvatarBig">
-                                    <?= strtoupper(substr($admin_name, 0, 1)) ?>
-                                </div>
-                                <div>
-                                    <h4 class="mb-1" id="accountNameTitle"><?= $admin_name ?></h4>
-                                    <span class="badge bg-primary-subtle text-primary fw-bold">Master Station Administrator</span>
-                                </div>
-                            </div>
-
-                            <form id="profileUpdateForm" onsubmit="handleProfileUpdate(event)">
-                                <div class="row g-2 mb-3">
-                                    <div class="col-12 col-sm-6">
-                                        <label class="form-label small fw-bold">First Name</label>
-                                        <input type="text" class="form-control" id="profFirstName" value="<?= htmlspecialchars(explode(' ', $admin_name)[0] ?? '') ?>" required>
-                                    </div>
-                                    <div class="col-12 col-sm-6">
-                                        <label class="form-label small fw-bold">Last Name</label>
-                                        <input type="text" class="form-control" id="profLastName" value="<?= htmlspecialchars(explode(' ', $admin_name)[1] ?? '') ?>" required>
-                                    </div>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label small fw-bold">Email Address</label>
-                                    <input type="email" class="form-control" id="profEmail" value="<?= $admin_email ?>" required>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label small fw-bold">Username</label>
-                                    <input type="text" class="form-control" id="profUsername" value="<?= $admin_username ?>" required>
-                                </div>
-
-                                <div class="mb-4">
-                                    <label class="form-label small fw-bold">Update Password (leave blank to keep current)</label>
-                                    <input type="password" class="form-control" id="profPassword" placeholder="••••••••">
-                                </div>
-
-                                <button type="submit" class="btn-modern-primary w-100 justify-content-center">
-                                    Update Admin Profile
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-
-                    <!-- System Users List -->
-                    <div class="col-12 col-lg-7 d-flex">
-                        <div class="white-panel flex-fill">
-                            <div class="panel-header-row">
-                                <div>
-                                    <h4 class="panel-title">System Administrator Accounts</h4>
-                                    <!-- <p class="panel-subtitle">Accounts authorized to configure water thresholds and control the pump</p> -->
-                                </div>
-                            </div>
-
-                            <div class="table-responsive">
-                                <table class="modern-table">
-                                    <thead>
-                                        <tr>
-                                            <th>ID</th>
-                                            <th>Name</th>
-                                            <th>Username</th>
-                                            <th>Email</th>
-                                            <th>Created</th>
-                                            <th>Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="userListTableBody">
-                                        <tr>
-                                            <td>1</td>
-                                            <td><strong><?= $admin_name ?></strong></td>
-                                            <td>@<?= $admin_username ?></td>
-                                            <td><?= $admin_email ?></td>
-                                            <td>Active</td>
-                                            <td><span class="badge bg-light text-primary border">Master</span></td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
-            </section>
+            <?php
+            // Modular Page Sections
+            require __DIR__ . '/pages/dashboard.php';
+            require __DIR__ . '/pages/pumplogs.php';
+            require __DIR__ . '/pages/reports.php';
+            require __DIR__ . '/pages/settings.php';
+            require __DIR__ . '/pages/account.php';
+            ?>
 
         </div>
     </main>
@@ -890,6 +377,8 @@ if ($db_connected && $conn) {
     <!-- CORE JAVASCRIPT APP LOGIC -->
     <script>
         // State variables
+        const CURRENT_USER_ID = <?= (int)$current_user_id ?>;
+        const CURRENT_USER_ROLE = '<?= htmlspecialchars($current_user_role, ENT_QUOTES) ?>';
         let currentLevel = <?= (int)$current_water_level ?>;
         let pumpState = '<?= $pump_status ?>';
         let minThreshold = <?= (int)$min_threshold ?>;
@@ -897,6 +386,7 @@ if ($db_connected && $conn) {
         let dashboardBarChart = null;
         let trendChart = null;
         let distributionChart = null;
+        let reportsRecords = [];
 
         // Mobile Sidebar Drawer Toggle
         function toggleMobileSidebar() {
@@ -973,8 +463,12 @@ if ($db_connected && $conn) {
             } else if (tabName === 'pumplogs') {
                 loadPumpLogsTable();
             } else if (tabName === 'reports') {
-                setTimeout(initReportsCharts, 100);
                 loadWaterLevelsTable();
+                setTimeout(() => {
+                    initReportsCharts(reportsRecords);
+                    if (trendChart) trendChart.resize();
+                    if (distributionChart) distributionChart.resize();
+                }, 100);
             } else if (tabName === 'account') {
                 loadUsersList();
             }
@@ -1426,8 +920,10 @@ if ($db_connected && $conn) {
             .done(data => {
                 if (data && data.success && data.data) {
                     const records = data.data;
+                    reportsRecords = records;
                     if (records.length === 0) {
                         tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">No water level records found.</td></tr>`;
+                        initReportsCharts(reportsRecords);
                         return;
                     }
                     let html = '';
@@ -1455,6 +951,7 @@ if ($db_connected && $conn) {
                     tbody.innerHTML = html;
                     const countBadge = document.getElementById('waterLevelsCountBadge');
                     if (countBadge) countBadge.innerText = `${records.length} Records (Latest to Oldest)`;
+                    initReportsCharts(reportsRecords);
                 } else {
                     tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-danger">Unable to load records.</td></tr>`;
                 }
@@ -1571,7 +1068,7 @@ if ($db_connected && $conn) {
                 dataType: 'json',
                 data: {
                     action: 'update_user',
-                    user_id: 1,
+                    user_id: CURRENT_USER_ID,
                     first_name: first,
                     last_name: last,
                     email: email,
@@ -1611,14 +1108,32 @@ if ($db_connected && $conn) {
                         if (!tbody) return;
                         let html = '';
                         data.data.forEach(u => {
+                            const role = String(u.role || 'admin').toLowerCase();
+                            const isMaster = (role === 'master');
+                            const isSelf = (Number(u.user_id) === CURRENT_USER_ID);
+                            const roleLabel = isMaster ? 'Master' : 'Admin';
+                            const roleBadgeClass = isMaster
+                                ? 'bg-primary-subtle text-primary border border-primary-subtle'
+                                : 'bg-warning-subtle text-warning border border-warning-subtle';
+
+                            // Master can delete admin accounts; Admin can only delete their own account; Master account cannot be deleted
+                            const canDelete = !isMaster && (
+                                CURRENT_USER_ROLE === 'master' ||
+                                (CURRENT_USER_ROLE === 'admin' && isSelf)
+                            );
+
+                            const escapedUsername = String(u.username || '').replace(/'/g, "\\'");
+                            const deleteBtn = canDelete
+                                ? `<button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteUserAccount(${Number(u.user_id)}, '${escapedUsername}', ${isSelf})">Delete</button>`
+                                : `<button type="button" class="btn btn-sm btn-outline-secondary" disabled title="${isMaster ? 'Master account cannot be deleted' : 'Only Master or account owner can delete'}">Delete</button>`;
+
                             html += `
                                 <tr>
-                                    <td>${u.user_id}</td>
                                     <td><strong>${u.first_name} ${u.last_name}</strong></td>
                                     <td>@${u.username}</td>
                                     <td>${u.email}</td>
-                                    <td>${u.created_at || 'Active'}</td>
-                                    <td><span class="badge bg-light text-primary border">Master</span></td>
+                                    <td><span class="badge ${roleBadgeClass}">${roleLabel}</span></td>
+                                    <td>${deleteBtn}</td>
                                 </tr>
                             `;
                         });
@@ -1631,6 +1146,57 @@ if ($db_connected && $conn) {
                     console.error('Users request failed:', status, error);
                     Swal.fire('Unable to Load Users', 'Administrator accounts could not be loaded.', 'error');
                 });
+        }
+
+        function deleteUserAccount(userId, username, isSelf) {
+            const confirmMsg = isSelf
+                ? `Are you sure you want to delete your own account (@${username})? You will be logged out immediately.`
+                : `Are you sure you want to delete administrator account @${username}?`;
+
+            Swal.fire({
+                title: 'Delete Account?',
+                text: confirmMsg,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc2626',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: 'Yes, Delete',
+                cancelButtonText: 'Cancel'
+            }).then(result => {
+                if (!result.isConfirmed) return;
+
+                $.ajax({
+                    url: 'insert_to_database_api.php',
+                    method: 'POST',
+                    dataType: 'json',
+                    data: {
+                        action: 'delete_user',
+                        user_id: userId
+                    }
+                })
+                .done(data => {
+                    if (!data || !data.success) {
+                        Swal.fire('Unable to Delete Account', data?.message || 'Account could not be deleted.', 'error');
+                        return;
+                    }
+
+                    Swal.fire({
+                        title: 'Account Deleted',
+                        text: data.message || 'Account removed successfully.',
+                        icon: 'success',
+                        confirmButtonColor: '#0284c7'
+                    }).then(() => {
+                        if (data.self_deleted) {
+                            window.location.href = 'login.php?logged_out=1';
+                        } else {
+                            loadUsersList();
+                        }
+                    });
+                })
+                .fail(() => {
+                    Swal.fire('Unable to Delete Account', 'Server error while deleting the account.', 'error');
+                });
+            });
         }
 
         function openAddUserModal() {
@@ -1712,99 +1278,150 @@ if ($db_connected && $conn) {
             });
         }
 
-        // Initialize Reports Charts (Chart.js)
-        function initReportsCharts() {
+        // Initialize or Update Reports Charts (24h-based from table records)
+        function initReportsCharts(records = reportsRecords) {
             if (typeof Chart === 'undefined') return;
+            const reportsSection = document.getElementById('tab-reports');
+            if (reportsSection && !reportsSection.classList.contains('active')) return;
 
             const textColor = '#64748b';
             const gridColor = '#f1f5f9';
+            const sourceRecords = Array.isArray(records) ? records : [];
+            // Table is latest->oldest; reverse to chronological (oldest->newest) for trend curve
+            const chronoRecords = [...sourceRecords].reverse();
 
-            // Chart 1: Water Level Trend
+            const trendLabels = chronoRecords.map(r => {
+                if (!r.recorded_at) return '';
+                // Extract 24-hour time HH:mm:ss from 'YYYY-MM-DD HH:MM:SS'
+                return String(r.recorded_at).slice(11, 19);
+            });
+            const waterData = chronoRecords.map(r => Number(r.water_level));
+            const minData = chronoRecords.map(r => Number(r.min_threshold || minThreshold));
+            const maxData = chronoRecords.map(r => Number(r.max_threshold || maxThreshold));
+            const latestMin = minData.length ? minData[minData.length - 1] : minThreshold;
+            const latestMax = maxData.length ? maxData[maxData.length - 1] : maxThreshold;
+
+            // Chart 1: Water Level Trend (24h timestamps from table)
             const trendCtx = document.getElementById('waterTrendChart');
             if (trendCtx) {
-                if (trendChart) trendChart.destroy();
-                trendChart = new Chart(trendCtx, {
-                    type: 'line',
-                    data: {
-                        labels: ['06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00'],
-                        datasets: [
-                            {
-                                label: 'Water Level (%)',
-                                data: [95, 88, 72, 60, 95, 84, 60, 95, 87, 85],
-                                borderColor: '#0284c7',
-                                backgroundColor: 'rgba(2, 132, 199, 0.12)',
-                                fill: true,
-                                tension: 0.35,
-                                pointBackgroundColor: '#0284c7',
-                                pointRadius: 4
-                            },
-                            {
-                                label: `Min Threshold (${minThreshold}%)`,
-                                data: [minThreshold, minThreshold, minThreshold, minThreshold, minThreshold, minThreshold, minThreshold, minThreshold, minThreshold, minThreshold],
-                                borderColor: '#f59e0b',
-                                borderDash: [5, 5],
-                                fill: false,
-                                pointRadius: 0
-                            },
-                            {
-                                label: `Max Cutoff (${maxThreshold}%)`,
-                                data: [maxThreshold, maxThreshold, maxThreshold, maxThreshold, maxThreshold, maxThreshold, maxThreshold, maxThreshold, maxThreshold, maxThreshold],
-                                borderColor: '#ef4444',
-                                borderDash: [5, 5],
-                                fill: false,
-                                pointRadius: 0
-                            }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                position: 'top',
-                                labels: { color: textColor }
-                            }
+                if (trendChart) {
+                    trendChart.data.labels = trendLabels;
+                    trendChart.data.datasets[0].data = waterData;
+                    trendChart.data.datasets[1].label = `Min Threshold (${latestMin}%)`;
+                    trendChart.data.datasets[1].data = minData;
+                    trendChart.data.datasets[2].label = `Max Cutoff (${latestMax}%)`;
+                    trendChart.data.datasets[2].data = maxData;
+                    trendChart.update('none');
+                } else {
+                    trendChart = new Chart(trendCtx, {
+                        type: 'line',
+                        data: {
+                            labels: trendLabels,
+                            datasets: [
+                                {
+                                    label: 'Water Level (%)',
+                                    data: waterData,
+                                    borderColor: '#0284c7',
+                                    backgroundColor: 'rgba(2, 132, 199, 0.12)',
+                                    fill: true,
+                                    tension: 0.35,
+                                    pointBackgroundColor: '#0284c7',
+                                    pointRadius: 3
+                                },
+                                {
+                                    label: `Min Threshold (${latestMin}%)`,
+                                    data: minData,
+                                    borderColor: '#f59e0b',
+                                    borderDash: [5, 5],
+                                    fill: false,
+                                    pointRadius: 0
+                                },
+                                {
+                                    label: `Max Cutoff (${latestMax}%)`,
+                                    data: maxData,
+                                    borderColor: '#ef4444',
+                                    borderDash: [5, 5],
+                                    fill: false,
+                                    pointRadius: 0
+                                }
+                            ]
                         },
-                        scales: {
-                            y: {
-                                min: 0,
-                                max: 100,
-                                ticks: { color: textColor, callback: v => v + '%' },
-                                grid: { color: gridColor }
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'top',
+                                    labels: { color: textColor }
+                                }
                             },
-                            x: {
-                                ticks: { color: textColor },
-                                grid: { display: false }
+                            scales: {
+                                y: {
+                                    min: 0,
+                                    max: 100,
+                                    ticks: { color: textColor, callback: v => v + '%' },
+                                    grid: { color: gridColor }
+                                },
+                                x: {
+                                    ticks: { color: textColor, maxTicksLimit: 10 },
+                                    grid: { display: false }
+                                }
                             }
                         }
-                    }
-                });
+                    });
+                }
             }
 
-            // Chart 2: Refill Distribution
+            // Chart 2: Refill Distribution (24h time buckets from pump ON records in table)
+            const buckets = [0, 0, 0, 0]; // 00:00-05:59, 06:00-11:59, 12:00-17:59, 18:00-23:59
+            sourceRecords.forEach(r => {
+                if (String(r.action).toUpperCase() !== 'ON' || !r.recorded_at) return;
+                const hour = parseInt(String(r.recorded_at).slice(11, 13), 10);
+                if (isNaN(hour)) return;
+                if (hour < 6) buckets[0]++;
+                else if (hour < 12) buckets[1]++;
+                else if (hour < 18) buckets[2]++;
+                else buckets[3]++;
+            });
+
+            const totalOn = buckets.reduce((sum, val) => sum + val, 0);
+            const distLabels = totalOn > 0
+                ? ['00:00 - 05:59', '06:00 - 11:59', '12:00 - 17:59', '18:00 - 23:59']
+                : ['No Pump ON Events (0)'];
+            const distData = totalOn > 0 ? buckets : [1];
+            const distColors = totalOn > 0
+                ? ['#38bdf8', '#0284c7', '#0369a1', '#64748b']
+                : ['#e2e8f0'];
+
             const distCtx = document.getElementById('refillDistributionChart');
             if (distCtx) {
-                if (distributionChart) distributionChart.destroy();
-                distributionChart = new Chart(distCtx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['Morning (6-11 AM)', 'Midday (11 AM-3 PM)', 'Afternoon (3-7 PM)', 'Night (7-11 PM)'],
-                        datasets: [{
-                            data: [35, 45, 15, 5],
-                            backgroundColor: ['#38bdf8', '#0284c7', '#0369a1', '#cbd5e1']
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                position: 'bottom',
-                                labels: { color: textColor }
+                if (distributionChart) {
+                    distributionChart.data.labels = distLabels;
+                    distributionChart.data.datasets[0].data = distData;
+                    distributionChart.data.datasets[0].backgroundColor = distColors;
+                    distributionChart.update('none');
+                } else {
+                    distributionChart = new Chart(distCtx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: distLabels,
+                            datasets: [{
+                                data: distData,
+                                backgroundColor: distColors
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom',
+                                    labels: { color: textColor }
+                                }
                             }
                         }
-                    }
-                });
+                    });
+                }
             }
         }
 
@@ -1818,18 +1435,37 @@ if ($db_connected && $conn) {
                 loadPumpLogsTable(true);
             } else if (currentTab === 'tab-reports') {
                 loadWaterLevelsTable();
+            } else if (currentTab === 'tab-account') {
+                loadUsersList();
             }
         }, 2000);
+
+        // Resize Chart.js instances cleanly for print preview and restore afterwards
+        window.addEventListener('beforeprint', () => {
+            if (trendChart) trendChart.resize();
+            if (distributionChart) distributionChart.resize();
+        });
+        window.addEventListener('afterprint', () => {
+            if (trendChart) trendChart.resize();
+            if (distributionChart) distributionChart.resize();
+        });
 
         // Initial setup on load
         document.addEventListener('DOMContentLoaded', () => {
             renderDashboardTelemetry();
             fetchLiveTelemetry();
             loadDashboardRecentLogs(true);
+            loadWaterLevelsTable();
             if ('<?= $page ?>' === 'pumplogs') {
                 loadPumpLogsTable();
             } else if ('<?= $page ?>' === 'reports') {
-                loadWaterLevelsTable();
+                setTimeout(() => {
+                    initReportsCharts(reportsRecords);
+                    if (trendChart) trendChart.resize();
+                    if (distributionChart) distributionChart.resize();
+                }, 100);
+            } else if ('<?= $page ?>' === 'account') {
+                loadUsersList();
             }
         });
     </script>
