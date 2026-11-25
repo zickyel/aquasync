@@ -1,6 +1,6 @@
 <?php
 header('Content-Type: application/json');
-require_once __DIR__ . '/dbcon.php';
+require_once __DIR__ . '/../dbcon.php';
 
 $type = isset($_GET['type']) ? $_GET['type'] : 'live_snapshot';
 

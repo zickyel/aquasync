@@ -19,8 +19,8 @@ int maxThreshold  = DEFAULT_MAX_THRESHOLD;  // Turn OFF pump ONLY when reaching 
 // ==========================================
 // 2. SERVER ENDPOINT URLS
 // ==========================================
-const char* SENSOR_API_URL   = "https://bullring-retold-reformer.ngrok-free.dev/aquasync/sensor_to_database_api.php";
-const char* SETTINGS_API_URL = "https://bullring-retold-reformer.ngrok-free.dev/aquasync/fetch_from_database_api.php?type=settings";
+const char* SENSOR_API_URL   = "https://bullring-retold-reformer.ngrok-free.dev/aquasync/api/sensor_to_database_api.php";
+const char* SETTINGS_API_URL = "https://bullring-retold-reformer.ngrok-free.dev/aquasync/api/fetch_from_database_api.php?type=settings";
 
 // ==========================================
 // 3. HARDWARE PINS & MOSFET (IRLB8721)

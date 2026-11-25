@@ -9,7 +9,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
-include 'dbcon.php';
+require_once __DIR__ . '/../dbcon.php';
 
 if (!$db_connected || !$conn) {
     echo json_encode([

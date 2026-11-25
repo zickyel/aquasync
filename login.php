@@ -11,6 +11,11 @@ if (isset($_SESSION['user_id'])) {
 $error_message = '';
 $success_message = '';
 
+if (isset($_SESSION['login_error'])) {
+    $error_message = $_SESSION['login_error'];
+    unset($_SESSION['login_error']);
+}
+
 if (isset($_GET['logged_out'])) {
     $success_message = 'You have safely logged out of AquaSync System Panel.';
 }
@@ -20,7 +25,9 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST') 
     $password_input = trim($_POST['password'] ?? '');
 
     if (empty($user_input) || empty($password_input)) {
-        $error_message = 'Please enter both username/email and password.';
+        $_SESSION['login_error'] = 'Please enter both username/email and password.';
+        header('Location: login.php');
+        exit;
     } else {
         $authenticated = false;
         $user_data = null;
@@ -66,7 +73,9 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST') 
             header('Location: index.php');
             exit;
         } else {
-            $error_message = 'Invalid username/email or password. Please try again.';
+            $_SESSION['login_error'] = 'Invalid username/email or password. Please try again.';
+            header('Location: login.php');
+            exit;
         }
     }
 }
@@ -293,6 +302,11 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST') 
     </main>
 
     <script>
+        // Remove ?logged_out=1 from URL so the logout message disappears on refresh
+        if (window.history && window.history.replaceState && window.location.search.includes('logged_out')) {
+            window.history.replaceState(null, '', window.location.pathname);
+        }
+
         function togglePasswordVisibility() {
             const pwd = document.getElementById('password');
             const eyeIcon = document.getElementById('eyeIcon');

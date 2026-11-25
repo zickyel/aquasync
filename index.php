@@ -216,25 +216,41 @@ if ($db_connected && $conn) {
                 </li>
 
             </ul>
+
+            <div class="nav-category-label mt-3">Public Site</div>
+            <ul class="nav-list">
+                <!-- Visit Website → Public Landing Page -->
+                <li>
+                    <a href="landing.php" target="_blank" rel="noopener noreferrer" class="nav-item-btn" id="nav-visit-website">
+                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="2" y1="12" x2="22" y2="12"></line>
+                            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                        </svg>
+                        <div class="nav-text-col">
+                            <span class="nav-main-text">Visit Website</span>
+                        </div>
+                    </a>
+                </li>
+            </ul>
         </div>
 
-            <!-- Admin Profile Strip -->
+            <!-- Admin Profile Card -->
             <div class="user-profile-strip">
-                <div class="user-info-left">
-                    <div class="user-avatar-circle" id="sidebarAvatar">
-                        <?= strtoupper(substr($admin_name, 0, 1)) ?>
-                    </div>
-                    <div class="user-text-details">
-                        <span class="user-name-title" id="sidebarUserName"><?= $admin_name ?></span>
-                        <span class="user-email-subtitle" id="sidebarUserEmail"><?= $admin_email ?></span>
-                    </div>
+                <div class="user-avatar-circle" id="sidebarAvatar">
+                    <?= strtoupper(substr($admin_name, 0, 1)) ?>
+                </div>
+                <div class="user-text-details">
+                    <span class="user-name-title" id="sidebarUserName"><?= htmlspecialchars($admin_name) ?></span>
+                    <span class="user-email-subtitle" id="sidebarUserEmail"><?= htmlspecialchars($admin_email) ?></span>
                 </div>
                 <button class="user-quick-action-btn" title="Logout" onclick="handleLogout()">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
                         <polyline points="16 17 21 12 16 7"></polyline>
                         <line x1="21" y1="12" x2="9" y2="12"></line>
                     </svg>
+                    <span>Logout</span>
                 </button>
             </div>
         </div>
@@ -731,7 +747,7 @@ if ($db_connected && $conn) {
             }
 
             $.ajax({
-                url: 'fetch_from_database_api.php',
+                url: 'api/fetch_from_database_api.php',
                 method: 'GET',
                 data: { type: 'pump_logs', limit: 5 },
                 dataType: 'json'
@@ -751,7 +767,7 @@ if ($db_connected && $conn) {
         // Fetch Live Telemetry from database API
         function fetchLiveTelemetry() {
             $.ajax({
-                url: 'fetch_from_database_api.php',
+                url: 'api/fetch_from_database_api.php',
                 method: 'GET',
                 data: { type: 'live_snapshot' },
                 dataType: 'json'
@@ -820,7 +836,7 @@ if ($db_connected && $conn) {
             }
 
             $.ajax({
-                url: 'fetch_from_database_api.php',
+                url: 'api/fetch_from_database_api.php',
                 method: 'GET',
                 data: { type: 'pump_logs', action: filter },
                 dataType: 'json'
@@ -912,7 +928,7 @@ if ($db_connected && $conn) {
             if (!tbody) return;
 
             $.ajax({
-                url: 'fetch_from_database_api.php',
+                url: 'api/fetch_from_database_api.php',
                 method: 'GET',
                 data: { type: 'water_levels', limit: 100 },
                 dataType: 'json'
@@ -1025,7 +1041,7 @@ if ($db_connected && $conn) {
             }
 
             $.ajax({
-                url: 'insert_to_database_api.php',
+                url: 'api/insert_to_database_api.php',
                 method: 'POST',
                 dataType: 'json',
                 data: {
@@ -1063,7 +1079,7 @@ if ($db_connected && $conn) {
             const pass = document.getElementById('profPassword').value;
 
             $.ajax({
-                url: 'insert_to_database_api.php',
+                url: 'api/insert_to_database_api.php',
                 method: 'POST',
                 dataType: 'json',
                 data: {
@@ -1097,7 +1113,7 @@ if ($db_connected && $conn) {
 
         function loadUsersList() {
             $.ajax({
-                url: 'fetch_from_database_api.php',
+                url: 'api/fetch_from_database_api.php',
                 method: 'GET',
                 data: { type: 'users' },
                 dataType: 'json'
@@ -1166,7 +1182,7 @@ if ($db_connected && $conn) {
                 if (!result.isConfirmed) return;
 
                 $.ajax({
-                    url: 'insert_to_database_api.php',
+                    url: 'api/insert_to_database_api.php',
                     method: 'POST',
                     dataType: 'json',
                     data: {
@@ -1227,7 +1243,7 @@ if ($db_connected && $conn) {
             }
 
             $.ajax({
-                url: 'insert_to_database_api.php',
+                url: 'api/insert_to_database_api.php',
                 method: 'POST',
                 dataType: 'json',
                 data: {

@@ -12,7 +12,7 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS
     exit;
 }
 
-require_once __DIR__ . '/dbcon.php';
+require_once __DIR__ . '/../dbcon.php';
 
 // Accept parameters from POST, GET, or raw JSON
 $raw_input = file_get_contents('php://input');
@@ -298,13 +298,16 @@ switch ($action) {
         $username   = trim($input['username'] ?? '');
         $password   = trim($input['password'] ?? '');
 
-        if (!$username || !$first_name || !$email) {
-            $response['message'] = 'First name, email, and username are required.';
+        if (!$username || !$first_name || !$email || !$password) {
+            $response['message'] = 'First name, email, username, and password are required.';
             break;
         }
 
+        // Hash password securely before inserting into database
+        $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+
         $stmt = $conn->prepare("INSERT INTO users (role, first_name, last_name, email, username, password, created_at) VALUES ('admin', ?, ?, ?, ?, ?, NOW())");
-        $stmt->bind_param("sssss", $first_name, $last_name, $email, $username, $password);
+        $stmt->bind_param("sssss", $first_name, $last_name, $email, $username, $hashed_password);
         if ($stmt->execute()) {
             $response['success'] = true;
             $response['message'] = "Admin user @{$username} created successfully.";
@@ -322,8 +325,10 @@ switch ($action) {
         $password   = trim($input['password'] ?? '');
 
         if ($password !== '') {
+            // Hash updated password securely before storing in database
+            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
             $stmt = $conn->prepare("UPDATE users SET first_name=?, last_name=?, email=?, username=?, password=? WHERE user_id=?");
-            $stmt->bind_param("sssssi", $first_name, $last_name, $email, $username, $password, $user_id);
+            $stmt->bind_param("sssssi", $first_name, $last_name, $email, $username, $hashed_password, $user_id);
         } else {
             $stmt = $conn->prepare("UPDATE users SET first_name=?, last_name=?, email=?, username=? WHERE user_id=?");
             $stmt->bind_param("ssssi", $first_name, $last_name, $email, $username, $user_id);

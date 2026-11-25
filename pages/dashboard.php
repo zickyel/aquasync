@@ -22,9 +22,19 @@
                 </div>
 
                 <!-- Hero Banner Card -->
+                <?php
+                $hero_greetings = [
+                    'Welcome back',
+                    'Hey there',
+                    'Nice to see you',
+                    "Glad you're here",
+                    'Welcome to AquaSync'
+                ];
+                $random_greeting = $hero_greetings[array_rand($hero_greetings)];
+                ?>
                 <div class="hero-banner-card">
                     <div class="hero-content-col">
-                        <h2 class="hero-title">Welcome back, <span id="heroUserName"><?= htmlspecialchars(explode(' ', $admin_name)[0]) ?></span></h2>
+                        <h2 class="hero-title"><span id="heroGreetingText"><?= htmlspecialchars($random_greeting) ?></span>, <span id="heroUserName"><?= htmlspecialchars(explode(' ', $admin_name)[0]) ?></span></h2>
                         <p class="hero-subtitle">
                             AquaSync Automated Water Refilling &amp; Monitoring System — real-time ESP32 water level sensor with automatic pump control.
                         </p>

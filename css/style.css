@@ -802,71 +802,92 @@ body {
 /* USER PROFILE STRIP */
 .user-profile-strip {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: space-between;
-    padding: 6px 4px;
-    border-radius: 12px;
+    text-align: center;
+    gap: 10px;
+    margin: 12px 14px 14px;
+    padding: 16px 14px;
+    border-radius: 16px;
+    background: #f8fafc;
+    border: 1px solid var(--border-subtle);
 }
 
 .user-info-left {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     overflow: hidden;
+    width: 100%;
 }
 
 .user-avatar-circle {
-    width: 38px;
-    height: 38px;
+    width: 48px;
+    height: 48px;
     border-radius: 50%;
     background: var(--primary-gradient);
     color: #ffffff;
     font-weight: 700;
-    font-size: 0.95rem;
+    font-size: 1.15rem;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    box-shadow: 0 2px 8px rgba(2, 132, 199, 0.25);
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.24);
 }
 
 .user-text-details {
     display: flex;
     flex-direction: column;
+    align-items: center;
     overflow: hidden;
-    line-height: 1.25;
+    width: 100%;
+    line-height: 1.3;
+    gap: 2px;
 }
 
 .user-name-title {
-    font-size: 0.84rem;
+    font-size: 0.88rem;
     font-weight: 700;
     color: var(--text-heading);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    max-width: 100%;
 }
 
 .user-email-subtitle {
-    font-size: 0.72rem;
+    font-size: 0.74rem;
     color: var(--text-muted);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    max-width: 100%;
 }
 
 .user-quick-action-btn {
-    background: none;
-    border: none;
-    color: var(--text-muted);
+    width: 100%;
+    margin-top: 2px;
+    background: #ffffff;
+    border: 1px solid var(--border-subtle);
+    color: #dc2626;
     cursor: pointer;
-    padding: 6px;
-    border-radius: 8px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     transition: all 0.2s ease;
 }
 
 .user-quick-action-btn:hover {
-    background-color: var(--bg-subtle);
-    color: var(--text-heading);
+    background-color: #fef2f2;
+    border-color: #fecaca;
+    color: #b91c1c;
 }
 
 /* BACKDROP OVERLAY FOR MOBILE SIDEBAR */
