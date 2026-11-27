@@ -26,6 +26,7 @@ $current_water_level = 85;
 $min_threshold = 60;
 $max_threshold = 90;
 $pump_status = 'OFF';
+$settings_history_rows = [];
 
 if ($db_connected && $conn) {
     // 0. Sync current logged-in user's role from database
@@ -44,11 +45,25 @@ if ($db_connected && $conn) {
         $user_role_stmt->close();
     }
 
-    // 1. Settings
+    // 1. Settings & Settings History
     $set_q = $conn->query("SELECT min_threshold, max_threshold FROM settings ORDER BY setting_id DESC LIMIT 1");
     if ($set_q && $s_r = $set_q->fetch_assoc()) {
         $min_threshold = (int)$s_r['min_threshold'];
         $max_threshold = (int)$s_r['max_threshold'];
+    }
+
+    $hist_q = $conn->query("
+        SELECT h.history_id, h.old_min_threshold, h.old_max_threshold, h.new_min_threshold, h.new_max_threshold, h.changed_at,
+               u.first_name, u.last_name, u.username, u.role
+        FROM settings_history h
+        LEFT JOIN users u ON h.changed_by = u.user_id
+        ORDER BY h.changed_at DESC, h.history_id DESC
+        LIMIT 50
+    ");
+    if ($hist_q && $hist_q->num_rows > 0) {
+        while ($h_r = $hist_q->fetch_assoc()) {
+            $settings_history_rows[] = $h_r;
+        }
     }
 
     // 2. Base dashboard strictly on the LAST ROW INSERTED into water_levels table
@@ -123,8 +138,8 @@ if ($db_connected && $conn) {
                     </svg>
                 </div>
                 <div class="brand-text-container">
-                    <span class="brand-title">AquaSync</span>
-                    <span class="brand-subtext"><span class="dot"></span> System Panel</span>
+                    <span class="brand-title lh-1">AquaSync</span>
+                    <small class="text-muted" style="font-size: 0.72rem;">Smart Auto Refilling System</small>
                 </div>
             </a>
             <!-- Mobile Close Button -->
@@ -309,7 +324,7 @@ if ($db_connected && $conn) {
         </header>
 
         <!-- CONTENT TABS -->
-        <div class="content-area">
+        <div class="content-area container-fluid p-3 p-md-4">
 
             <?php
             // Modular Page Sections
@@ -485,6 +500,8 @@ if ($db_connected && $conn) {
                     if (trendChart) trendChart.resize();
                     if (distributionChart) distributionChart.resize();
                 }, 100);
+            } else if (tabName === 'settings') {
+                loadSettingsHistory();
             } else if (tabName === 'account') {
                 loadUsersList();
             }
@@ -1062,6 +1079,7 @@ if ($db_connected && $conn) {
                     confirmButtonColor: '#0284c7'
                 });
                 fetchLiveTelemetry();
+                loadSettingsHistory();
             })
             .fail((xhr, status, error) => {
                 console.error('Threshold update request failed:', status, error);
@@ -1069,14 +1087,98 @@ if ($db_connected && $conn) {
             });
         }
 
+        function loadSettingsHistory() {
+            const tbody = document.getElementById('settingsHistoryTableBody');
+            if (!tbody) return;
+
+            $.ajax({
+                url: 'api/fetch_from_database_api.php?type=settings_history',
+                method: 'GET',
+                dataType: 'json'
+            })
+            .done(res => {
+                if (!res || !res.success || !Array.isArray(res.data)) return;
+                const rows = res.data;
+                if (rows.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">No threshold changes recorded yet.</td></tr>';
+                    return;
+                }
+
+                const esc = (str) => String(str ?? '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+
+                tbody.innerHTML = rows.map(h => {
+                    const oldMin = parseInt(h.old_min_threshold ?? 0, 10);
+                    const newMin = parseInt(h.new_min_threshold ?? 0, 10);
+                    const oldMax = parseInt(h.old_max_threshold ?? 0, 10);
+                    const newMax = parseInt(h.new_max_threshold ?? 0, 10);
+
+                    let userHtml = '<span class="text-muted">System / Unknown</span>';
+                    if (h.changed_by_name) {
+                        const uname = h.changed_by_username ? ` <span class="text-muted small">(@${esc(h.changed_by_username)})</span>` : '';
+                        userHtml = `<strong>${esc(h.changed_by_name)}</strong>${uname}`;
+                    }
+
+                    let roleHtml = '<span class="text-muted">&mdash;</span>';
+                    if (h.changed_by_role) {
+                        const isMaster = h.changed_by_role === 'master';
+                        const badgeCls = isMaster
+                            ? 'bg-primary-subtle text-primary border border-primary-subtle'
+                            : 'bg-warning-subtle text-warning border border-warning-subtle';
+                        roleHtml = `<span class="badge ${badgeCls}">${isMaster ? 'Master' : 'Admin'}</span>`;
+                    }
+
+                    let timeText = '&mdash;';
+                    if (h.changed_at) {
+                        const dt = new Date(h.changed_at.replace(' ', 'T'));
+                        timeText = isNaN(dt.getTime())
+                            ? esc(h.changed_at)
+                            : dt.toLocaleString('en-US', { month: 'short', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                    }
+
+                    return `
+                        <tr>
+                            <td>
+                                <span class="badge bg-secondary-subtle text-secondary fw-semibold">${oldMin}%</span>
+                                <span class="text-muted mx-1">&rarr;</span>
+                                <span class="badge bg-primary-subtle text-primary fw-bold">${newMin}%</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary-subtle text-secondary fw-semibold">${oldMax}%</span>
+                                <span class="text-muted mx-1">&rarr;</span>
+                                <span class="badge bg-success-subtle text-success fw-bold">${newMax}%</span>
+                            </td>
+                            <td>${userHtml}</td>
+                            <td>${roleHtml}</td>
+                            <td>${timeText}</td>
+                        </tr>
+                    `;
+                }).join('');
+            });
+        }
+
         // User profile update
         function handleProfileUpdate(e) {
             e.preventDefault();
-            const first = document.getElementById('profFirstName').value;
-            const last = document.getElementById('profLastName').value;
-            const email = document.getElementById('profEmail').value;
-            const user = document.getElementById('profUsername').value;
+            const first = document.getElementById('profFirstName').value.trim();
+            const last = document.getElementById('profLastName').value.trim();
+            const email = document.getElementById('profEmail').value.trim();
+            const user = document.getElementById('profUsername').value.trim();
             const pass = document.getElementById('profPassword').value;
+
+            if (!first || !last || !email || !user) {
+                Swal.fire('Incomplete Details', 'Please complete all required fields.', 'warning');
+                return;
+            }
+
+            if (!/^[\p{L}\s]+$/u.test(first) || !/^[\p{L}\s]+$/u.test(last)) {
+                Swal.fire('Invalid Name', 'First name and last name must not contain numbers or special characters.', 'warning');
+                return;
+            }
 
             $.ajax({
                 url: 'api/insert_to_database_api.php',
@@ -1233,6 +1335,11 @@ if ($db_connected && $conn) {
 
             if (!firstName || !lastName || !email || !username || !password) {
                 Swal.fire('Incomplete Details', 'Please complete all required fields.', 'warning');
+                return;
+            }
+
+            if (!/^[\p{L}\s]+$/u.test(firstName) || !/^[\p{L}\s]+$/u.test(lastName)) {
+                Swal.fire('Invalid Name', 'First name and last name must not contain numbers or special characters.', 'warning');
                 return;
             }
 

@@ -1,6 +1,4 @@
-            <!-- ========================================== -->
-            <!-- 2. PUMP LOGS TAB (REFILL HISTORY)          -->
-            <!-- ========================================== -->
+
             <section id="tab-pumplogs" class="tab-section <?= ($page === 'pumplogs') ? 'active' : '' ?>">
                 <div class="section-header-row">
                     <div>

@@ -1,6 +1,4 @@
-            <!-- ========================================== -->
-            <!-- 3. REPORTS TAB (ANALYTICS)                 -->
-            <!-- ========================================== -->
+
             <section id="tab-reports" class="tab-section <?= ($page === 'reports') ? 'active' : '' ?>">
                 <div class="section-header-row">
                     <div>

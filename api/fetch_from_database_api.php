@@ -218,17 +218,69 @@ if ($type === 'live_snapshot') {
         'current_level'  => $current_lvl,
     ];
 } elseif ($type === 'settings') {
-    $set_res = $conn->query("SELECT * FROM settings ORDER BY setting_id DESC LIMIT 1");
+    $set_res = $conn->query("
+        SELECT s.*, u.first_name, u.last_name, u.username, u.role
+        FROM settings s
+        LEFT JOIN users u ON s.updated_by = u.user_id
+        ORDER BY s.setting_id DESC
+        LIMIT 1
+    ");
     if ($set_res && $row = $set_res->fetch_assoc()) {
+        $full_name = trim(($row['first_name'] ?? '') . ' ' . ($row['last_name'] ?? ''));
         $response['data'] = [
-            'setting_id' => (int)$row['setting_id'],
-            'min_threshold' => (int)$row['min_threshold'],
-            'max_threshold' => (int)$row['max_threshold'],
-            'manual_pump' => isset($row['manual_pump']) ? (int)$row['manual_pump'] : 0
+            'setting_id'          => (int)$row['setting_id'],
+            'min_threshold'       => (int)$row['min_threshold'],
+            'max_threshold'       => (int)$row['max_threshold'],
+            'manual_pump'         => isset($row['manual_pump']) ? (int)$row['manual_pump'] : 0,
+            'updated_by'          => isset($row['updated_by']) ? (int)$row['updated_by'] : null,
+            'updated_by_name'     => $full_name !== '' ? $full_name : null,
+            'updated_by_username' => $row['username'] ?? null,
+            'updated_by_role'     => isset($row['role']) ? strtolower(trim($row['role'])) : null,
+            'updated_at'          => $row['updated_at'] ?? null
         ];
     } else {
         $response['data'] = $default_settings;
     }
+} elseif ($type === 'settings_history') {
+    $history = [];
+    $hist_res = $conn->query("
+        SELECT
+            h.history_id,
+            h.setting_id,
+            h.old_min_threshold,
+            h.old_max_threshold,
+            h.new_min_threshold,
+            h.new_max_threshold,
+            h.changed_by,
+            h.changed_at,
+            u.first_name,
+            u.last_name,
+            u.username,
+            u.role
+        FROM settings_history h
+        LEFT JOIN users u ON h.changed_by = u.user_id
+        ORDER BY h.changed_at DESC, h.history_id DESC
+        LIMIT 50
+    ");
+    if ($hist_res && $hist_res->num_rows > 0) {
+        while ($h = $hist_res->fetch_assoc()) {
+            $full_name = trim(($h['first_name'] ?? '') . ' ' . ($h['last_name'] ?? ''));
+            $history[] = [
+                'history_id'          => (int)$h['history_id'],
+                'setting_id'          => (int)$h['setting_id'],
+                'old_min_threshold'   => (int)$h['old_min_threshold'],
+                'old_max_threshold'   => (int)$h['old_max_threshold'],
+                'new_min_threshold'   => (int)$h['new_min_threshold'],
+                'new_max_threshold'   => (int)$h['new_max_threshold'],
+                'changed_by'          => isset($h['changed_by']) ? (int)$h['changed_by'] : null,
+                'changed_by_name'     => $full_name !== '' ? $full_name : null,
+                'changed_by_username' => $h['username'] ?? null,
+                'changed_by_role'     => isset($h['role']) ? strtolower(trim($h['role'])) : null,
+                'changed_at'          => $h['changed_at']
+            ];
+        }
+    }
+    $response['data'] = $history;
 } elseif ($type === 'users') {
     $users = [];
     $res = $conn->query("SELECT user_id, role, first_name, last_name, email, username, created_at FROM users ORDER BY user_id ASC");

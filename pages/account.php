@@ -1,6 +1,4 @@
-            <!-- ========================================== -->
-            <!-- 5. ACCOUNT TAB (ADMIN MANAGEMENT)          -->
-            <!-- ========================================== -->
+
             <section id="tab-account" class="tab-section <?= ($page === 'account') ? 'active' : '' ?>">
                 <div class="section-header-row">
                     <div>
@@ -84,7 +82,7 @@
                             <div class="panel-header-row">
                                 <div>
                                     <h4 class="panel-title">System Administrator Accounts</h4>
-                                    <!-- <p class="panel-subtitle">Accounts authorized to configure water thresholds and control the pump</p> -->
+                                    
                                 </div>
                             </div>
 

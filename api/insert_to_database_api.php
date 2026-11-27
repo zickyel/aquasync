@@ -41,6 +41,13 @@ if (!$db_connected || !$conn) {
     exit;
 }
 
+/**
+ * Validate that a person's name contains only letters and spaces (no numbers or special characters).
+ */
+function is_valid_person_name(string $name): bool {
+    return preg_match('/^[\p{L}\s]+$/u', $name) === 1;
+}
+
 // Helper function to insert water level reading and handle pump logs
 function handleWaterLevelInsert($conn, $input) {
     $water_level = null;
@@ -252,15 +259,19 @@ switch ($action) {
             break;
         }
 
+        $updated_by = isset($_SESSION['user_id']) && (int)$_SESSION['user_id'] > 0
+            ? (int)$_SESSION['user_id']
+            : null;
+
         // Check if settings record exists
         $check = $conn->query("SELECT setting_id FROM settings LIMIT 1");
         if ($check && $check->num_rows > 0) {
             $row = $check->fetch_assoc();
-            $stmt = $conn->prepare("UPDATE settings SET min_threshold = ?, max_threshold = ? WHERE setting_id = ?");
-            $stmt->bind_param("iii", $min, $max, $row['setting_id']);
+            $stmt = $conn->prepare("UPDATE settings SET min_threshold = ?, max_threshold = ?, updated_by = ? WHERE setting_id = ?");
+            $stmt->bind_param("iiii", $min, $max, $updated_by, $row['setting_id']);
         } else {
-            $stmt = $conn->prepare("INSERT INTO settings (min_threshold, max_threshold) VALUES (?, ?)");
-            $stmt->bind_param("ii", $min, $max);
+            $stmt = $conn->prepare("INSERT INTO settings (min_threshold, max_threshold, updated_by) VALUES (?, ?, ?)");
+            $stmt->bind_param("iii", $min, $max, $updated_by);
         }
 
         if ($stmt && $stmt->execute()) {
@@ -298,8 +309,13 @@ switch ($action) {
         $username   = trim($input['username'] ?? '');
         $password   = trim($input['password'] ?? '');
 
-        if (!$username || !$first_name || !$email || !$password) {
-            $response['message'] = 'First name, email, username, and password are required.';
+        if (!$username || !$first_name || !$last_name || !$email || !$password) {
+            $response['message'] = 'First name, last name, email, username, and password are required.';
+            break;
+        }
+
+        if (!is_valid_person_name($first_name) || !is_valid_person_name($last_name)) {
+            $response['message'] = 'First name and last name must not contain numbers or special characters.';
             break;
         }
 
@@ -323,6 +339,16 @@ switch ($action) {
         $email      = trim($input['email'] ?? '');
         $username   = trim($input['username'] ?? '');
         $password   = trim($input['password'] ?? '');
+
+        if (!$first_name || !$last_name || !$email || !$username) {
+            $response['message'] = 'First name, last name, email, and username are required.';
+            break;
+        }
+
+        if (!is_valid_person_name($first_name) || !is_valid_person_name($last_name)) {
+            $response['message'] = 'First name and last name must not contain numbers or special characters.';
+            break;
+        }
 
         if ($password !== '') {
             // Hash updated password securely before storing in database

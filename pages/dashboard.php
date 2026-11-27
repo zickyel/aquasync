@@ -1,6 +1,4 @@
-            <!-- ========================================== -->
-            <!-- 1. DASHBOARD TAB (REAL-TIME MONITORING)    -->
-            <!-- ========================================== -->
+
             <section id="tab-dashboard" class="tab-section <?= ($page === 'dashboard') ? 'active' : '' ?>">
                 <!-- Title Header Row -->
                 <div class="section-header-row">
@@ -38,7 +36,7 @@
                         <p class="hero-subtitle">
                             AquaSync Automated Water Refilling &amp; Monitoring System — real-time ESP32 water level sensor with automatic pump control.
                         </p>
-                        <div class="hero-action-pills">
+                        <div class="hero-action-pills d-flex flex-wrap gap-2">
                             <span class="pill-stat">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <rect x="4" y="4" width="16" height="16" rx="2"></rect>
@@ -54,27 +52,9 @@
                             </span>
                         </div>
                     </div>
-                    <div class="hero-badge-col position-relative d-none d-md-flex align-items-center justify-content-center flex-shrink-0" style="z-index: 2;">
-                        <!-- Water Droplet with 2 Widely Spaced Soft Concentric Waves -->
-                        <svg width="286" height="260" viewBox="-26 0 286 260" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="margin: -58px -18px -58px 0; overflow: visible;">
-                            <defs>
-                                <filter id="softRingBlur" x="-20%" y="-20%" width="140%" height="140%">
-                                    <feGaussianBlur stdDeviation="0.8"/>
-                                </filter>
-                            </defs>
-                            <!-- Wave 2 (outermost, huge gap) -->
-                            <circle cx="130" cy="130" r="150" stroke="rgba(255,255,255,0.18)" stroke-width="1.25" filter="url(#softRingBlur)"/>
-                            <!-- Wave 1 (innermost) -->
-                            <circle cx="130" cy="130" r="75" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.26)" stroke-width="1.25" filter="url(#softRingBlur)"/>
-                            <!-- Centered white water droplet (no shadow) -->
-                            <g transform="translate(100, 100) scale(2.5)">
-                                <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" fill="rgba(255,255,255,0.95)"/>
-                            </g>
-                        </svg>
-                    </div>
                 </div>
 
-                <!-- 4 Key Metric Cards (Bootstrap Grid Responsive) -->
+               
                 <div class="snapshot-title-row">
                     <div>
                         <h3 class="snapshot-heading mb-1">Operational Metrics Snapshot</h3>
@@ -150,7 +130,7 @@
                     </div>
                 </div>
 
-                <!-- Recent Activity Feed Table (Powered by pump_logs VIEW, Limit 5) -->
+                
                 <div class="white-panel">
                     <div class="panel-header-row">
                         <div>

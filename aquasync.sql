@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 25, 2026 at 06:24 AM
+-- Generation Time: Nov 27, 2026 at 01:30 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -44,15 +44,73 @@ CREATE TABLE `pump_logs` (
 CREATE TABLE `settings` (
   `setting_id` int(11) NOT NULL,
   `min_threshold` int(11) NOT NULL DEFAULT 60,
-  `max_threshold` int(11) NOT NULL DEFAULT 95
+  `max_threshold` int(11) NOT NULL DEFAULT 95,
+  `updated_by` int(11) DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `settings`
 --
 
-INSERT INTO `settings` (`setting_id`, `min_threshold`, `max_threshold`) VALUES
-(1, 20, 90);
+INSERT INTO `settings` (`setting_id`, `min_threshold`, `max_threshold`, `updated_by`, `updated_at`) VALUES
+(1, 15, 86, 2, '2026-11-27 00:02:02');
+
+--
+-- Triggers `settings`
+--
+DELIMITER $$
+CREATE TRIGGER `after_settings_update` AFTER UPDATE ON `settings` FOR EACH ROW BEGIN
+    IF OLD.min_threshold <> NEW.min_threshold OR OLD.max_threshold <> NEW.max_threshold THEN
+        INSERT INTO settings_history (
+            setting_id,
+            old_min_threshold,
+            old_max_threshold,
+            new_min_threshold,
+            new_max_threshold,
+            changed_by
+        )
+        VALUES (
+            NEW.setting_id,
+            OLD.min_threshold,
+            OLD.max_threshold,
+            NEW.min_threshold,
+            NEW.max_threshold,
+            NEW.updated_by
+        );
+    END IF;
+END
+$$
+DELIMITER ;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `settings_history`
+--
+
+CREATE TABLE `settings_history` (
+  `history_id` int(11) NOT NULL,
+  `setting_id` int(11) NOT NULL,
+  `old_min_threshold` int(11) NOT NULL,
+  `old_max_threshold` int(11) NOT NULL,
+  `new_min_threshold` int(11) NOT NULL,
+  `new_max_threshold` int(11) NOT NULL,
+  `changed_by` int(11) DEFAULT NULL,
+  `changed_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `settings_history`
+--
+
+INSERT INTO `settings_history` (`history_id`, `setting_id`, `old_min_threshold`, `old_max_threshold`, `new_min_threshold`, `new_max_threshold`, `changed_by`, `changed_at`) VALUES
+(1, 1, 20, 90, 15, 90, 1, '2026-11-26 23:25:52'),
+(2, 1, 15, 90, 20, 87, 1, '2026-11-26 23:26:19'),
+(3, 1, 20, 87, 20, 90, 1, '2026-11-26 23:28:19'),
+(4, 1, 20, 90, 15, 89, 5, '2026-11-27 00:00:44'),
+(5, 1, 15, 89, 10, 90, 5, '2026-11-27 00:00:59'),
+(6, 1, 10, 90, 15, 86, 2, '2026-11-27 00:02:02');
 
 -- --------------------------------------------------------
 
@@ -77,7 +135,8 @@ CREATE TABLE `users` (
 
 INSERT INTO `users` (`user_id`, `role`, `first_name`, `last_name`, `email`, `username`, `password`, `created_at`) VALUES
 (1, 'master', 'Ezekiel', 'Reyes', 'ezekielreyes@gmail.com', 'admin', '$2y$10$A6TgOkK1M673BgRNSvk9seFlTMqFsqPByoMUC8bxHQLLkZP0czx8O', '2026-11-03 12:00:06'),
-(2, 'admin', 'John Paul', 'Rosales', 'jpgads@gmail.com', 'jpgods', '$2y$10$4a1ZzXGk69qSZ4cyPA94Be/TzDJIIbUm2uI6bkmN294i4E0GsdiGC', '2026-11-25 03:18:33');
+(2, 'admin', 'John Paul', 'Rosales', 'jpgads@gmail.com', 'jpgods', '$2y$10$4a1ZzXGk69qSZ4cyPA94Be/TzDJIIbUm2uI6bkmN294i4E0GsdiGC', '2026-11-25 03:18:33'),
+(5, 'admin', 'Amira', 'Esteron', 'amiraesteron@gmail.com', 'amira', '$2y$10$7bjfy4SPTcvhwt1oB9VHcOks1VWPm5g50OsEVqJtFp2Fz9pEaEPOe', '2026-11-27 00:00:19');
 
 -- --------------------------------------------------------
 
@@ -291,7 +350,16 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW 
 -- Indexes for table `settings`
 --
 ALTER TABLE `settings`
-  ADD PRIMARY KEY (`setting_id`);
+  ADD PRIMARY KEY (`setting_id`),
+  ADD KEY `fk_settings_user` (`updated_by`);
+
+--
+-- Indexes for table `settings_history`
+--
+ALTER TABLE `settings_history`
+  ADD PRIMARY KEY (`history_id`),
+  ADD KEY `fk_history_setting` (`setting_id`),
+  ADD KEY `fk_history_user` (`changed_by`);
 
 --
 -- Indexes for table `users`
@@ -317,16 +385,39 @@ ALTER TABLE `settings`
   MODIFY `setting_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
+-- AUTO_INCREMENT for table `settings_history`
+--
+ALTER TABLE `settings_history`
+  MODIFY `history_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+
+--
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `water_levels`
 --
 ALTER TABLE `water_levels`
   MODIFY `level_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=174;
+
+--
+-- Constraints for dumped tables
+--
+
+--
+-- Constraints for table `settings`
+--
+ALTER TABLE `settings`
+  ADD CONSTRAINT `fk_settings_user` FOREIGN KEY (`updated_by`) REFERENCES `users` (`user_id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+--
+-- Constraints for table `settings_history`
+--
+ALTER TABLE `settings_history`
+  ADD CONSTRAINT `fk_history_setting` FOREIGN KEY (`setting_id`) REFERENCES `settings` (`setting_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_history_user` FOREIGN KEY (`changed_by`) REFERENCES `users` (`user_id`) ON DELETE SET NULL;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

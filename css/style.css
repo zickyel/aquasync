@@ -1,9 +1,4 @@
-/*
- * =========================================================================
- * GOLDEN DROPS - SMART AUTO REFILLING SYSTEM PANEL
- * Stylesheet (Light Blue & White Theme) - Modular and Responsive
- * =========================================================================
- */
+
 
 :root {
     --primary: #0284c7;
@@ -49,9 +44,7 @@ body {
     overflow-x: hidden;
 }
 
-/* =========================================================================
-   LOGIN PAGE STYLING (Split Screen with Floating Card & Crest Badges)
-   ========================================================================= */
+
 .login-body {
     min-height: 100vh;
     background: #f1f5f9;
@@ -61,13 +54,17 @@ body {
     padding: 0;
 }
 
+.login-body-minimal {
+    background: radial-gradient(circle at 20% 20%, #f0f9ff 0%, #f8fafc 45%, #e6f2fe 100%);
+}
+
 .login-layout {
     display: flex;
     min-height: 100vh;
     width: 100%;
 }
 
-/* Left Brand Panel: Deep blue gradient with water concentric rings */
+
 .login-brand-panel {
     position: relative;
     isolation: isolate;
@@ -82,7 +79,6 @@ body {
     background: radial-gradient(circle at 25% 30%, #0369a1 0%, #075985 45%, #022442 100%);
 }
 
-/* Water concentric ripple background rings */
 .login-brand-panel::before,
 .login-brand-panel::after {
     position: absolute;
@@ -150,7 +146,6 @@ body {
     max-width: 580px;
 }
 
-/* Badges / Crests cluster matching reference screenshot */
 .login-crests-cluster {
     display: flex;
     flex-direction: column;
@@ -558,9 +553,7 @@ body {
     }
 }
 
-/* =========================================================================
-   SIDEBAR NAVIGATION
-   ========================================================================= */
+
 .sidebar {
     width: var(--sidebar-width);
     background: var(--bg-sidebar);
@@ -910,12 +903,11 @@ body {
     opacity: 1;
 }
 
-/* =========================================================================
-   MAIN CONTENT WRAPPER & TOPBAR
-   ========================================================================= */
 .main-wrapper {
     margin-left: var(--sidebar-width);
     flex: 1;
+    min-width: 0;
+    width: 100%;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
@@ -1022,9 +1014,7 @@ body {
     color: var(--text-body);
 }
 
-/* =========================================================================
-   PAGE CONTENT & PANELS
-   ========================================================================= */
+
 .content-area {
     padding: 32px;
     max-width: 1400px;
@@ -1068,7 +1058,7 @@ body {
 }
 
 .section-main-heading {
-    font-size: 1.85rem;
+    font-size: clamp(1.3rem, 2.8vw, 1.85rem);
     font-weight: 800;
     color: var(--text-heading);
     letter-spacing: -0.6px;
@@ -1145,7 +1135,7 @@ body {
 }
 
 .hero-title {
-    font-size: 1.8rem;
+    font-size: clamp(1.3rem, 2.8vw, 1.8rem);
     font-weight: 800;
     letter-spacing: -0.5px;
     margin-bottom: 8px;
@@ -1153,7 +1143,7 @@ body {
 }
 
 .hero-subtitle {
-    font-size: 0.96rem;
+    font-size: clamp(0.84rem, 1.6vw, 0.96rem);
     color: rgba(255, 255, 255, 0.92);
     line-height: 1.5;
     margin-bottom: 18px;
@@ -1169,14 +1159,20 @@ body {
 .hero-action-pills .pill-stat {
     background: rgba(255, 255, 255, 0.16);
     backdrop-filter: blur(6px);
-    padding: 6px 14px;
-    border-radius: 12px;
-    font-size: 0.8rem;
+    padding: 5px 11px;
+    border-radius: 10px;
+    font-size: 0.72rem;
     font-weight: 600;
     border: 1px solid rgba(255, 255, 255, 0.2);
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
+}
+
+.hero-action-pills .pill-stat svg {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
 }
 
 /* METRIC & PANELS */
@@ -1188,7 +1184,7 @@ body {
 }
 
 .snapshot-heading {
-    font-size: 1.15rem;
+    font-size: clamp(1rem, 2vw, 1.15rem);
     font-weight: 800;
     color: var(--text-heading);
 }
@@ -1265,7 +1261,7 @@ body {
 }
 
 .stat-main-number {
-    font-size: 1.85rem;
+    font-size: clamp(1.45rem, 2.8vw, 1.85rem);
     font-weight: 800;
     color: var(--text-heading);
     line-height: 1.1;
@@ -1321,6 +1317,8 @@ body {
     border-radius: var(--radius-card);
     padding: 24px;
     box-shadow: var(--shadow-subtle);
+    min-width: 0;
+    width: 100%;
 }
 
 .panel-header-row {
@@ -1619,9 +1617,6 @@ body {
     box-shadow: 0 0 0 0.25rem rgba(2, 132, 199, 0.25);
 }
 
-/* =========================================================================
-   RESPONSIVE DESIGN (BREAKPOINTS)
-   ========================================================================= */
 @media (max-width: 991.98px) {
     .sidebar {
         transform: translateX(-100%);
@@ -1647,16 +1642,37 @@ body {
         padding: 0 18px;
     }
 
-    .content-area {
-        padding: 20px 14px;
-    }
-
     .hero-banner-card {
         padding: 22px 20px;
     }
+}
 
-    .hero-title {
-        font-size: 1.45rem;
+@media (max-width: 767.98px) {
+    .section-header-row,
+    .panel-header-row {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 12px;
+    }
+
+    .white-panel {
+        padding: 16px;
+    }
+
+    .hero-action-pills .pill-stat {
+        font-size: 0.66rem;
+        padding: 4px 9px;
+    }
+
+    .modern-table {
+        min-width: 600px;
+    }
+
+    .modern-table th,
+    .modern-table td {
+        padding: 10px 12px;
+        font-size: 0.82rem;
+        white-space: nowrap;
     }
 }
 
@@ -1664,11 +1680,14 @@ body {
     .live-date-pill {
         display: none;
     }
+
+    .topbar-section-badge {
+        font-size: 0.68rem !important;
+        letter-spacing: 0.6px !important;
+    }
 }
 
-/* ========================================== */
-/* PRINT STYLES (SUMMARY REPORT)              */
-/* ========================================== */
+
 @media print {
     @page {
         size: auto;

@@ -344,13 +344,6 @@ $panel_label = $is_logged_in ? 'Go to Dashboard' : 'Admin Login';
                         AquaSync continuously tracks reservoir water levels with an ESP32 water level sensor, automatically controls the refill pump using hysteresis thresholds, and delivers real-time analytics and audit logs.
                     </p>
                     <div class="d-flex flex-wrap justify-content-center gap-3">
-                        <a href="<?= $panel_url ?>" class="btn-cta-primary px-4 py-3">
-                            Open System Panel
-                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-                                <line x1="5" y1="12" x2="19" y2="12"></line>
-                                <polyline points="12 5 19 12 12 19"></polyline>
-                            </svg>
-                        </a>
                         <a href="#how-it-works" class="btn-cta-outline px-4 py-3">
                             See How It Works
                         </a>

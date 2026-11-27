@@ -1,6 +1,4 @@
-            <!-- ========================================== -->
-            <!-- 4. SETTINGS TAB (THRESHOLD CONFIGURATION)  -->
-            <!-- ========================================== -->
+
             <section id="tab-settings" class="tab-section <?= ($page === 'settings') ? 'active' : '' ?>">
                 <div class="section-header-row mb-4">
                     <div>
@@ -80,6 +78,81 @@
                                     </span>
                                     <?php endfor; ?>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings History Table -->
+                <div class="row g-4 mt-1">
+                    <div class="col-12">
+                        <div class="white-panel">
+                            <div class="panel-header-row">
+                                <div>
+                                    <h4 class="panel-title mb-1">Settings History</h4>
+                                    <p class="panel-subtitle mb-0">Audit log of all previous water level threshold changes</p>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="modern-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Min Threshold Change</th>
+                                            <th>Max Threshold Change</th>
+                                            <th>Changed By</th>
+                                            <th>Role</th>
+                                            <th>Changed At</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="settingsHistoryTableBody">
+                                        <?php if (!empty($settings_history_rows)): ?>
+                                            <?php foreach ($settings_history_rows as $h):
+                                                $hName = trim(($h['first_name'] ?? '') . ' ' . ($h['last_name'] ?? ''));
+                                                $hUsername = $h['username'] ?? null;
+                                                $hRole = isset($h['role']) ? strtolower(trim($h['role'])) : null;
+                                                $hTime = !empty($h['changed_at']) ? date('M d, Y h:i A', strtotime($h['changed_at'])) : '—';
+                                            ?>
+                                            <tr>
+                                                <td>
+                                                    <span class="badge bg-secondary-subtle text-secondary fw-semibold"><?= (int)$h['old_min_threshold'] ?>%</span>
+                                                    <span class="text-muted mx-1">&rarr;</span>
+                                                    <span class="badge bg-primary-subtle text-primary fw-bold"><?= (int)$h['new_min_threshold'] ?>%</span>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-secondary-subtle text-secondary fw-semibold"><?= (int)$h['old_max_threshold'] ?>%</span>
+                                                    <span class="text-muted mx-1">&rarr;</span>
+                                                    <span class="badge bg-success-subtle text-success fw-bold"><?= (int)$h['new_max_threshold'] ?>%</span>
+                                                </td>
+                                                <td>
+                                                    <?php if ($hName !== ''): ?>
+                                                        <strong><?= htmlspecialchars($hName) ?></strong>
+                                                        <?php if ($hUsername): ?>
+                                                            <span class="text-muted small">(@<?= htmlspecialchars($hUsername) ?>)</span>
+                                                        <?php endif; ?>
+                                                    <?php else: ?>
+                                                        <span class="text-muted">System / Unknown</span>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td>
+                                                    <?php if ($hRole): ?>
+                                                        <span class="badge <?= ($hRole === 'master') ? 'bg-primary-subtle text-primary border border-primary-subtle' : 'bg-warning-subtle text-warning border border-warning-subtle' ?>">
+                                                            <?= ($hRole === 'master') ? 'Master' : 'Admin' ?>
+                                                        </span>
+                                                    <?php else: ?>
+                                                        <span class="text-muted">&mdash;</span>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td><?= htmlspecialchars($hTime) ?></td>
+                                            </tr>
+                                            <?php endforeach; ?>
+                                        <?php else: ?>
+                                            <tr>
+                                                <td colspan="5" class="text-center text-muted py-4">No threshold changes recorded yet.</td>
+                                            </tr>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
